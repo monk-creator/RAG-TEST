@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RAG Simulator</title>
+<style>
+
+body{
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+background:#0f172a;
+color:white;
+margin:0;
+padding:40px;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+}
+
+h1{
+text-align:center;
+margin-bottom:40px;
+}
+
+.box{
+background:#1e293b;
+padding:20px;
+border-radius:12px;
+margin-bottom:20px;
+box-shadow:0 10px 20px rgba(0,0,0,0.3);
+}
+
+input{
+width:80%;
+padding:12px;
+border-radius:8px;
+border:none;
+font-size:16px;
+}
+
+button{
+padding:12px 20px;
+border:none;
+background:#3b82f6;
+color:white;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+}
+
+button:hover{
+background:#2563eb;
+}
+
+.step{
+opacity:0.3;
+transition:0.4s;
+}
+
+.step.active{
+opacity:1;
+transform:scale(1.02);
+}
+
+.doc{
+background:#334155;
+padding:10px;
+margin:6px 0;
+border-radius:6px;
+}
+
+.answer{
+background:#065f46;
+padding:15px;
+border-radius:10px;
+margin-top:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🔎 Retrieval Augmented Generation Simulator</h1>
+
+<div class="box">
+<input id="query" placeholder="Ask something... (ex: What is RAG?)">
+<button onclick="runRAG()">Run RAG</button>
+</div>
+
+<div id="step1" class="box step">
+<h3>Step 1 — User Query</h3>
+<p id="queryDisplay"></p>
+</div>
+
+<div id="step2" class="box step">
+<h3>Step 2 — Retrieval from Knowledge Base</h3>
+<div id="retrievedDocs"></div>
+</div>
+
+<div id="step3" class="box step">
+<h3>Step 3 — Prompt Augmentation</h3>
+<p id="augmentedPrompt"></p>
+</div>
+
+<div id="step4" class="box step">
+<h3>Step 4 — LLM Generation</h3>
+<div class="answer" id="finalAnswer"></div>
+</div>
+
+</div>
+
+<script>
+
+const knowledgeBase = [
+{
+text:"RAG stands for Retrieval Augmented Generation.",
+keywords:["rag"]
+},
+{
+text:"RAG improves LLM answers by retrieving external documents.",
+keywords:["rag","llm"]
+},
+{
+text:"Vector databases store embeddings for semantic search.",
+keywords:["vector","database"]
+},
+{
+text:"LLMs generate responses based on prompts and context.",
+keywords:["llm"]
+},
+{
+text:"Retrieval systems search knowledge bases for relevant documents.",
+keywords:["retrieval","search"]
+}
+];
+
+function runRAG(){
+
+resetSteps();
+
+let query=document.getElementById("query").value.toLowerCase();
+
+document.getElementById("queryDisplay").innerText=query;
+
+activate("step1");
+
+setTimeout(()=>{
+
+let docs=knowledgeBase.filter(doc=>
+doc.keywords.some(k=>query.includes(k))
+);
+
+if(docs.length===0){
+docs=[knowledgeBase[Math.floor(Math.random()*knowledgeBase.length)]];
+}
+
+let container=document.getElementById("retrievedDocs");
+container.innerHTML="";
+
+docs.forEach(d=>{
+let div=document.createElement("div");
+div.className="doc";
+div.innerText=d.text;
+container.appendChild(div);
+});
+
+activate("step2");
+
+setTimeout(()=>{
+
+let context=docs.map(d=>d.text).join(" ");
+
+let augmented=`User Question: ${query}
+
+Context Retrieved:
+${context}`;
+
+document.getElementById("augmentedPrompt").innerText=augmented;
+
+activate("step3");
+
+setTimeout(()=>{
+
+let answer=`Based on retrieved knowledge:
+
+${context}
+
+Answer: This response was generated using retrieved documents to improve accuracy.`;
+
+document.getElementById("finalAnswer").innerText=answer;
+
+activate("step4");
+
+},1200);
+
+},1200);
+
+},1200);
+
+}
+
+function activate(id){
+document.getElementById(id).classList.add("active");
+}
+
+function resetSteps(){
+
+["step1","step2","step3","step4"].forEach(s=>{
+document.getElementById(s).classList.remove("active");
+});
+
+document.getElementById("retrievedDocs").innerHTML="";
+document.getElementById("augmentedPrompt").innerText="";
+document.getElementById("finalAnswer").innerText="";
+
+}
+
+</script>
+
+</body>
+</html>
