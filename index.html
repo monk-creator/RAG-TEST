@@ -1,50 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>RAG Simulator</title>
+<title>Advanced RAG Visual Simulator</title>
+
 <style>
 
 body{
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+font-family: Inter,system-ui;
 background:#0f172a;
 color:white;
 margin:0;
-padding:40px;
-}
-
-.container{
-max-width:1100px;
-margin:auto;
+padding:30px;
 }
 
 h1{
 text-align:center;
-margin-bottom:40px;
+margin-bottom:30px;
 }
 
-.box{
+.container{
+max-width:1200px;
+margin:auto;
+}
+
+.panel{
 background:#1e293b;
 padding:20px;
 border-radius:12px;
 margin-bottom:20px;
-box-shadow:0 10px 20px rgba(0,0,0,0.3);
+box-shadow:0 10px 30px rgba(0,0,0,0.4);
 }
 
 input{
-width:80%;
 padding:12px;
+width:60%;
 border-radius:8px;
 border:none;
-font-size:16px;
 }
 
 button{
 padding:12px 20px;
 border:none;
+border-radius:8px;
 background:#3b82f6;
 color:white;
-border-radius:8px;
 font-weight:bold;
 cursor:pointer;
 }
@@ -53,28 +53,44 @@ button:hover{
 background:#2563eb;
 }
 
-.step{
-opacity:0.3;
-transition:0.4s;
-}
-
-.step.active{
-opacity:1;
-transform:scale(1.02);
-}
-
-.doc{
+.chunk{
 background:#334155;
 padding:10px;
 margin:6px 0;
 border-radius:6px;
+font-size:14px;
+}
+
+.highlight{
+border:2px solid #22c55e;
+}
+
+.embedding{
+font-size:12px;
+opacity:0.8;
+}
+
+.score{
+float:right;
+color:#22c55e;
+}
+
+.prompt{
+background:#020617;
+padding:15px;
+border-radius:10px;
+white-space:pre-wrap;
 }
 
 .answer{
-background:#065f46;
+background:#064e3b;
 padding:15px;
 border-radius:10px;
 margin-top:10px;
+}
+
+.slider{
+margin-left:20px;
 }
 
 </style>
@@ -84,138 +100,211 @@ margin-top:10px;
 
 <div class="container">
 
-<h1>🔎 Retrieval Augmented Generation Simulator</h1>
+<h1>🔎 Retrieval Augmented Generation Visual Simulator</h1>
 
-<div class="box">
-<input id="query" placeholder="Ask something... (ex: What is RAG?)">
+<div class="panel">
+
+<input id="query" placeholder="Ask something (ex: What is RAG?)">
+
 <button onclick="runRAG()">Run RAG</button>
+
+<label class="slider">
+Top-K
+<input type="range" min="1" max="5" value="2" id="topk">
+<span id="kval">2</span>
+</label>
+
 </div>
 
-<div id="step1" class="box step">
-<h3>Step 1 — User Query</h3>
-<p id="queryDisplay"></p>
+<div class="panel">
+<h3>📚 Knowledge Base (Chunks)</h3>
+<div id="chunks"></div>
 </div>
 
-<div id="step2" class="box step">
-<h3>Step 2 — Retrieval from Knowledge Base</h3>
-<div id="retrievedDocs"></div>
+<div class="panel">
+<h3>🧮 Embedding + Similarity</h3>
+<div id="similarity"></div>
 </div>
 
-<div id="step3" class="box step">
-<h3>Step 3 — Prompt Augmentation</h3>
-<p id="augmentedPrompt"></p>
+<div class="panel">
+<h3>🧠 Prompt Augmentation</h3>
+<div id="prompt" class="prompt"></div>
 </div>
 
-<div id="step4" class="box step">
-<h3>Step 4 — LLM Generation</h3>
-<div class="answer" id="finalAnswer"></div>
+<div class="panel">
+<h3>🤖 LLM Generation</h3>
+<div id="answer" class="answer"></div>
 </div>
 
 </div>
 
 <script>
 
-const knowledgeBase = [
-{
-text:"RAG stands for Retrieval Augmented Generation.",
-keywords:["rag"]
-},
-{
-text:"RAG improves LLM answers by retrieving external documents.",
-keywords:["rag","llm"]
-},
-{
-text:"Vector databases store embeddings for semantic search.",
-keywords:["vector","database"]
-},
-{
-text:"LLMs generate responses based on prompts and context.",
-keywords:["llm"]
-},
-{
-text:"Retrieval systems search knowledge bases for relevant documents.",
-keywords:["retrieval","search"]
-}
+const docs=[
+"Retrieval Augmented Generation improves LLM accuracy.",
+"Vector databases store embeddings for semantic search.",
+"Embeddings convert text into numeric vectors.",
+"Similarity search finds the most relevant chunks.",
+"Large Language Models generate responses from prompts."
 ];
+
+let chunks=docs.map((d,i)=>({
+text:d,
+embedding:randomVector()
+}));
+
+function randomVector(){
+
+let v=[];
+for(let i=0;i<5;i++){
+v.push(Math.random().toFixed(2));
+}
+return v;
+
+}
+
+function renderChunks(){
+
+let container=document.getElementById("chunks");
+container.innerHTML="";
+
+chunks.forEach((c,i)=>{
+
+let div=document.createElement("div");
+
+div.className="chunk";
+
+div.innerHTML=`
+${c.text}
+<div class="embedding">Embedding: [${c.embedding}]</div>
+`;
+
+container.appendChild(div);
+
+});
+
+}
+
+renderChunks();
+
+function cosine(a,b){
+
+let sum=0;
+
+for(let i=0;i<a.length;i++){
+sum+=a[i]*b[i];
+}
+
+return sum.toFixed(2);
+
+}
 
 function runRAG(){
 
-resetSteps();
+let query=document.getElementById("query").value;
 
-let query=document.getElementById("query").value.toLowerCase();
+let queryEmbedding=randomVector();
 
-document.getElementById("queryDisplay").innerText=query;
+let similarityResults=[];
 
-activate("step1");
+chunks.forEach(c=>{
 
-setTimeout(()=>{
+let score=cosine(queryEmbedding,c.embedding);
 
-let docs=knowledgeBase.filter(doc=>
-doc.keywords.some(k=>query.includes(k))
-);
+similarityResults.push({
+chunk:c,
+score:score
+});
 
-if(docs.length===0){
-docs=[knowledgeBase[Math.floor(Math.random()*knowledgeBase.length)]];
+});
+
+similarityResults.sort((a,b)=>b.score-a.score);
+
+let k=document.getElementById("topk").value;
+
+document.getElementById("kval").innerText=k;
+
+let retrieved=similarityResults.slice(0,k);
+
+showSimilarity(similarityResults,retrieved);
+
+buildPrompt(query,retrieved);
+
+generateAnswer(query,retrieved);
+
 }
 
-let container=document.getElementById("retrievedDocs");
+function showSimilarity(results,retrieved){
+
+let container=document.getElementById("similarity");
+
 container.innerHTML="";
 
-docs.forEach(d=>{
+results.forEach(r=>{
+
 let div=document.createElement("div");
-div.className="doc";
-div.innerText=d.text;
+
+div.className="chunk";
+
+if(retrieved.includes(r)){
+div.classList.add("highlight");
+}
+
+div.innerHTML=`
+${r.chunk.text}
+<span class="score">${r.score}</span>
+`;
+
 container.appendChild(div);
+
 });
 
-activate("step2");
+}
 
-setTimeout(()=>{
+function buildPrompt(query,retrieved){
 
-let context=docs.map(d=>d.text).join(" ");
+let context=retrieved.map(r=>r.chunk.text).join("\n");
 
-let augmented=`User Question: ${query}
+let prompt=`
+User Question:
+${query}
 
-Context Retrieved:
-${context}`;
-
-document.getElementById("augmentedPrompt").innerText=augmented;
-
-activate("step3");
-
-setTimeout(()=>{
-
-let answer=`Based on retrieved knowledge:
-
+Retrieved Context:
 ${context}
 
-Answer: This response was generated using retrieved documents to improve accuracy.`;
+Instruction:
+Answer the question using the retrieved context.
+`;
 
-document.getElementById("finalAnswer").innerText=answer;
-
-activate("step4");
-
-},1200);
-
-},1200);
-
-},1200);
+document.getElementById("prompt").innerText=prompt;
 
 }
 
-function activate(id){
-document.getElementById(id).classList.add("active");
+function generateAnswer(query,retrieved){
+
+let answerBox=document.getElementById("answer");
+
+answerBox.innerText="";
+
+let context=retrieved.map(r=>r.chunk.text).join(" ");
+
+let answer=`Based on retrieved knowledge: ${context} 
+
+The system used vector similarity to find the most relevant information before generating this answer.`;
+
+let i=0;
+
+let interval=setInterval(()=>{
+
+answerBox.innerText+=answer[i];
+
+i++;
+
+if(i>=answer.length){
+clearInterval(interval);
 }
 
-function resetSteps(){
-
-["step1","step2","step3","step4"].forEach(s=>{
-document.getElementById(s).classList.remove("active");
-});
-
-document.getElementById("retrievedDocs").innerHTML="";
-document.getElementById("augmentedPrompt").innerText="";
-document.getElementById("finalAnswer").innerText="";
+},20);
 
 }
 
